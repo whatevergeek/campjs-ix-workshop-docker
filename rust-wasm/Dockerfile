@@ -14,6 +14,4 @@ RUN apt-get update && apt-get upgrade -qy && \
     rustup update && \
     rustup default nightly
 
-curl https://sh.rustup.rs -sSf | sh
-
 CMD ["/bin/bash", "--login"]
