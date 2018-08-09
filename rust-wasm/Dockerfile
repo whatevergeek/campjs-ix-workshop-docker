@@ -14,4 +14,8 @@ RUN apt-get update && apt-get upgrade -qy && \
     rustup update && \
     rustup default nightly
 
+RUN rustup update && \
+    rustup install nightly && \
+    rustup target add wasm32-unknown-unknown --toolchain nightly
+
 CMD ["/bin/bash", "--login"]
