@@ -1,54 +1,26 @@
-FROM debian:stable
+FROM ubuntu:16.04
+MAINTAINER "Yasuumi Nishikawa" <yasu.umi.19910101@gmail.com>
 
-# Initial Docker based on "OpenGG <liy099@gmail.com>"
-# Compiling Rust to Wasm with the LLVM wasm-backend (without Emscripten)
-# https://gist.github.com/LukasKalbertodt/821ab8b85a25f4c54544cc43bed2c39f
+ENV DEBIAN_FRONTEND noninteractive
 
-# install deps
-RUN cd / \
-  # apt source
-  # && sed -i "s|deb.debian.org|mirrors.ustc.edu.cn|" /etc/apt/sources.list \
-  # && sed -i "s|security.debian.org|mirrors.ustc.edu.cn/debian-security|" /etc/apt/sources.list \
-  # deps
-  && apt-get update \
-  && apt-get install -y git build-essential cmake curl g++ python \
-  # base dir
-  && mkdir /rust-wasm-bin \
-  && mkdir /rust-wasm \
-  && cd /rust-wasm \
-  # llvm
-  && git clone --single-branch --depth=1 https://github.com/llvm-mirror/llvm.git \
-  && cd llvm \
-  && mkdir working \
-  && cd working \
-  && cmake -DCMAKE_INSTALL_PREFIX=/rust-wasm-bin/llvm -DCMAKE_BUILD_TYPE=Release -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=WebAssembly .. \
-  && make -j8 \
-  && make install \
-  # binaryen
-  && cd /rust-wasm \
-  && git clone --single-branch --depth=1 https://github.com/WebAssembly/binaryen.git \
-  && cd binaryen \
-  && mkdir working \
-  && cd working \
-  && cmake -DCMAKE_INSTALL_PREFIX=/rust-wasm-bin/binaryen .. \
-  && make -j8 \
-  && make install \
-  # rustup
-  && curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain nightly \
-  # clean
-  && apt-get purge -y --auto-remove git build-essential cmake curl g++ python \
-  && apt-get autoclean -y \
-  && apt-get clean -y \
-  && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* /rust-wasm
+ENV PATH=/root/.cargo/bin:$PATH
 
-# enviroment
-ENV PATH /root/.cargo/bin:/rust-wasm-bin/llvm/bin:/rust-wasm-bin/binaryen/bin:${PATH}
+RUN apt-get update && apt-get upgrade -qy && \
+    apt-get install -y --no-install-recommends \
+    curl git openssl libssl-dev ca-certificates \
+    build-essential python && \
+    apt-get clean && rm -rf /var/cache/apt/archives/* /var/lib/apt/lists/* && \
 
-# working directory of container
-VOLUME ["/work"]
-WORKDIR /work
+    curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain nightly -y && \
+    rustup update && \
+    rustup default nightly && \
 
-# entrypoint script
-ENTRYPOINT [ "rust-wasm.sh" ]
+    mkdir /emscripten && cd /emscripten && \
+    curl -O https://s3.amazonaws.com/mozilla-games/emscripten/releases/emsdk-portable.tar.gz && \
+    tar -xzf emsdk-portable.tar.gz && cd ./emsdk-portable && \
+    ./emsdk update && ./emsdk install latest && ./emsdk activate && \
+    /bin/bash ./emsdk_env.sh && ls -la && cat ./emsdk_set_env.sh >> /root/.profile && \
 
-ADD "rust-wasm.sh" /usr/local/bin/
+    rustup target add wasm32-unknown-emscripten
+
+CMD ["/bin/bash", "--login"]
