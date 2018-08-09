@@ -26,4 +26,7 @@ ENV NODE_VERSION 8.11.1
 RUN curl https://raw.githubusercontent.com/creationix/nvm/v0.33.8/install.sh | /bin/bash \
      && /bin/bash -c "source $NVM_DIR/nvm.sh && nvm install $NODE_VERSION && nvm use --delete-prefix $NODE_VERSION"
 
+# Install wasm-bindgen
+RUN cargo +nightly install wasm-bindgen-cli
+
 CMD ["/bin/bash", "--login"]
